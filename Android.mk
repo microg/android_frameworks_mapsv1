@@ -3,7 +3,7 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 LOCAL_MODULE := com.google.android.maps
 LOCAL_MODULE_TAGS := optional
-LOCAL_STATIC_JAVA_LIBRARIES := osmdroid
+LOCAL_STATIC_JAVA_LIBRARIES := osmdroid-android
 LOCAL_SRC_FILES := $(call all-java-files-under, src)
 LOCAL_PACKAGE_NAME := com.google.android.maps
 LOCAL_CERTIFICATE := platform
