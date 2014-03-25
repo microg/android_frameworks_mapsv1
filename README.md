@@ -2,10 +2,11 @@ MapsV1
 ======
 The next generation Maps API v1 implementation, based on osmdroid.
 
-Installation as replacement for Google Maps API v1
---------------------------------------------------
+Installation as system library
+------------------------------
+MapsV1 can be used on any rooted Android system to replace the Google Maps API v1 with an OpenStreetMap based implementation.
+
 Release builds may be found on the [release page](https://github.com/microg/android_frameworks_mapsv1/releases).
-Installation requires a rooted system.
 
 ### Android 2.3 - 4.4
 Download `com.google.android.maps.zip` and install it from recovery.
@@ -29,8 +30,8 @@ Alternatively use any build system of your choice by creating an appropriate bui
 Heavily depends on [osmdroid](https://github.com/osmdroid/osmdroid) as well as its dependency [slf4j](https://github.com/qos-ch/slf4j)
 
 ### Building apps against MapsV1
-You can build you app against MapsV1 instead of Google Maps.
-This will allow you to replace the Google Maps with osmdroid in an existing app without the need to change a line of code.
+You can build your app against MapsV1 instead of Google Maps.
+This will allow you to replace Google Maps with osmdroid in an existing app without the need to change a line of code.
 
 ### As part of a custom ROM
 MapsV1 can be build as part of Android when building an Android ROM from source.
