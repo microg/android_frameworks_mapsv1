@@ -1,71 +1,102 @@
 package com.google.android.maps;
 
 import android.content.Context;
+import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Rect;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.AttributeSet;
 import android.util.Log;
-import android.view.GestureDetector;
 import android.view.*;
 import android.widget.ZoomButtonsController;
 import android.widget.ZoomControls;
 import org.microg.annotation.OriginalApi;
+import org.microg.internal.R;
 import org.microg.osmdroid.SafeMapTileProviderBasic;
 import org.microg.osmdroid.SafeNetworkAvailabilityCheck;
 import org.osmdroid.DefaultResourceProxyImpl;
 import org.osmdroid.api.IMapView;
+import org.osmdroid.tileprovider.tilesource.ITileSource;
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
 import org.osmdroid.tileprovider.util.SimpleRegisterReceiver;
 
-import java.util.Collections;
 import java.util.List;
+
+/*
+ * TODO:
+ * - Possibly bad trackball support, but no way to test for me
+ * - We don't draw the reticle, but it's for trackball only afaik.
+ * - We can't show traffic and satellite maps the same moment...
+ */
 
 @OriginalApi
 public class MapView extends ViewGroup implements IMapView {
 	private static final String TAG = MapView.class.getName();
-	private final IMapView wrapped;
+	private static final String KEY_CENTER_LATITUDE = MapView.class.getName() + ".centerLatitude";
+	private static final String KEY_CENTER_LONGITUDE = MapView.class.getName() + ".centerLongitude";
+	private static final String KEY_ZOOM_DISPLAYED = MapView.class.getName() + ".zoomDisplayed";
+	private static final String KEY_ZOOM_LEVEL = MapView.class.getName() + ".zoomLevel";
+
+	// TODO: We should read these from a setting, users might want to change it...
+	private static final ITileSource DEFAULT = TileSourceFactory.MAPNIK;
+	private static final ITileSource TRAFFIC = TileSourceFactory.PUBLIC_TRANSPORT;
+	private static final ITileSource SATELLITE = TileSourceFactory.MAPQUESTAERIAL;
 
 	private GestureDetector gestureDetector;
-	private Handler handler;
+	private Handler handler = new Handler();
+	private ReticleDrawMode reticleDrawMode;
+	private final WrappedMapView wrapped;
 	private boolean zoomControlsEnabled = true;
 	private Runnable zoomControlsHideCallback;
 	private ZoomButtonsController zoomButtonsController;
 	private ZoomControls zoomControls;
 
+	private boolean satellite = false;
+	private boolean streetView = false;
+	private boolean traffic = false;
+
 	@OriginalApi
 	public MapView(Context context, AttributeSet attrs) {
-		super(context, attrs);
-		wrapped = setupWrapped(context, attrs);
-		setup();
+		this(context, attrs, R.attr.mapViewStyle);
 	}
 
 	@OriginalApi
 	public MapView(Context context, AttributeSet attrs, int defStyle) {
-		super(context, attrs, defStyle);
-		wrapped = setupWrapped(context, attrs);
-		setup();
+		this(context, attrs, defStyle, null);
 	}
 
 	@OriginalApi
 	public MapView(Context context, String apiKey) {
-		super(context);
-		wrapped = setupWrapped(context, null);
-		setup();
-		if (apiKey == null) {
-			Log.w(TAG, "MapViews specify an API Key to be compatible with Google's implementation.");
-		}
-		if (!(context instanceof MapActivity)) {
-			Log.w(TAG, "MapViews should only be created inside instances of MapActivity to be compatible with Google's implementation.");
-		}
+		this(context, null, R.attr.mapViewStyle, apiKey);
 	}
 
-	private void setup() {
-		if (wrapped instanceof View) {
-			addView((View) wrapped);
+	public MapView(Context context, AttributeSet attrs, int defStyle, String apiKey) {
+		super(context, attrs, defStyle);
+		wrapped = new WrappedMapView(context, attrs);
+		addView(wrapped);
+
+		// Warn the developer that his usage of MapView will not work with Google's implementation.
+
+		if (attrs != null) {
+			TypedArray array = context.obtainStyledAttributes(attrs, R.styleable.MapView);
+			if (array != null) {
+				if (apiKey == null) {
+					apiKey = array.getString(R.styleable.MapView_apiKey);
+				}
+				array.recycle();
+			}
 		}
-		handler = new Handler();
+
+		if (apiKey == null) {
+			Log.w(TAG, "MapViews must specify an API Key to be compatible with Google's implementation.");
+		}
+		if (!(context instanceof MapActivity)) {
+			Log.w(TAG, "MapViews must only be created inside instances of MapActivity to be compatible with Google's implementation.");
+		}
+
+		// We detect gestures non-exclusively. osmdroid uses the same gesture detection,
+		// but we can't depend on their implementation as it's not accessible from this context.
 		gestureDetector = new GestureDetector(getContext(), new GestureDetector.SimpleOnGestureListener() {
 			@Override
 			public boolean onDown(MotionEvent e) {
@@ -80,10 +111,6 @@ public class MapView extends ViewGroup implements IMapView {
 			}
 		});
 		gestureDetector.setIsLongpressEnabled(false);
-	}
-
-	private IMapView setupWrapped(Context context, AttributeSet attrs) {
-		return new WrappedMapView(context, attrs);
 	}
 
 	@OriginalApi
@@ -115,24 +142,23 @@ public class MapView extends ViewGroup implements IMapView {
 				handler.postDelayed(zoomControlsHideCallback, ViewConfiguration.getZoomControlsTimeout());
 			}
 		}
-		Log.w(TAG, "Possibly incomplete implementation of displayZoomControls()");
 	}
 
 	@OriginalApi
 	protected LayoutParams generateDefaultLayoutParams() {
-		return new LayoutParams(super.generateDefaultLayoutParams());
+		return new LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, new GeoPoint(0, 0), LayoutParams.CENTER);
 	}
 
 	@OriginalApi
 	@Override
 	public ViewGroup.LayoutParams generateLayoutParams(AttributeSet attrs) {
-		return super.generateLayoutParams(attrs); // TODO
+		return new LayoutParams(getContext(), attrs);
 	}
 
 	@OriginalApi
 	@Override
 	protected ViewGroup.LayoutParams generateLayoutParams(ViewGroup.LayoutParams p) {
-		return super.generateLayoutParams(p); // TODO
+		return new LayoutParams(p);
 	}
 
 	@OriginalApi
@@ -167,11 +193,7 @@ public class MapView extends ViewGroup implements IMapView {
 
 	@OriginalApi
 	public List<Overlay> getOverlays() {
-		if (wrapped instanceof org.osmdroid.views.MapView) {
-			return new OverlayList(((org.osmdroid.views.MapView) wrapped).getOverlays());
-		} else {
-			return new OverlayList(Collections.<org.osmdroid.views.overlay.Overlay>emptyList());
-		}
+		return new OverlayList(wrapped.getOverlays());
 	}
 
 	@OriginalApi
@@ -186,7 +208,6 @@ public class MapView extends ViewGroup implements IMapView {
 
 	@OriginalApi
 	public ZoomButtonsController getZoomButtonsController() {
-		Log.w(TAG, "Possibly incomplete implementation of getZoomButtonsController()");
 		return zoomButtonsController;
 	}
 
@@ -221,7 +242,6 @@ public class MapView extends ViewGroup implements IMapView {
 				}
 			};
 		}
-		Log.w(TAG, "Possibly incomplete implementation of getZoomControls()");
 		return zoomControls;
 	}
 
@@ -233,32 +253,35 @@ public class MapView extends ViewGroup implements IMapView {
 
 	@OriginalApi
 	public boolean isSatellite() {
-		return false; // TODO
+		return satellite;
 	}
 
 	@OriginalApi
 	public void setSatellite(boolean on) {
-		// TODO
+		satellite = on;
+		wrapped.updateTileSource();
 	}
 
 	@OriginalApi
 	public boolean isStreetView() {
-		return false; // TODO
+		return streetView;
 	}
 
 	@OriginalApi
 	public void setStreetView(boolean on) {
-		// TODO
+		if (on) setTraffic(false);
+		streetView = on;
 	}
 
 	@OriginalApi
 	public boolean isTraffic() {
-		return false; // TODO
+		return traffic;
 	}
 
 	@OriginalApi
 	public void setTraffic(boolean on) {
-		// TODO
+		if (on) setStreetView(false);
+		traffic = true;
 	}
 
 	@OriginalApi
@@ -295,7 +318,7 @@ public class MapView extends ViewGroup implements IMapView {
 	@Override
 	protected void onLayout(boolean changed, int l, int t, int r, int b) {
 		if (wrapped instanceof org.osmdroid.views.MapView) {
-			((org.osmdroid.views.MapView) wrapped).layout(l, t, r, b);
+			wrapped.layout(l, t, r, b);
 		}
 	}
 
@@ -307,14 +330,31 @@ public class MapView extends ViewGroup implements IMapView {
 
 	@OriginalApi
 	public void onRestoreInstanceState(Bundle state) {
-		Log.w(TAG, "Incomplete implementation of onRestoreInstanceState()");
-		// TODO
+		if (state != null) {
+			int latE6 = state.getInt(KEY_CENTER_LATITUDE, Integer.MAX_VALUE);
+			int lonE6 = state.getInt(KEY_CENTER_LONGITUDE, Integer.MAX_VALUE);
+			if (latE6 != Integer.MAX_VALUE && lonE6 != Integer.MAX_VALUE) {
+				getController().setCenter(new GeoPoint(latE6, lonE6));
+			}
+			int zoom = state.getInt(KEY_ZOOM_LEVEL, Integer.MAX_VALUE);
+			if (zoom != Integer.MAX_VALUE) {
+				getController().setZoom(zoom);
+			}
+			if (state.getInt(KEY_ZOOM_DISPLAYED, 0) != 0) {
+				displayZoomControls(false);
+			}
+		}
 	}
 
 	@OriginalApi
 	public void onSaveInstanceState(Bundle state) {
-		Log.w(TAG, "Incomplete implementation of onSaveInstanceState()");
-		// TODO
+		// We use the same way to store information in the bundle as Google does,
+		// also this is not documented, there are a number of apps known to rely on it.
+
+		state.putInt(KEY_CENTER_LATITUDE, getMapCenter().getLatitudeE6());
+		state.putInt(KEY_CENTER_LONGITUDE, getMapCenter().getLongitudeE6());
+		state.putInt(KEY_ZOOM_LEVEL, getZoomLevel());
+		state.putInt(KEY_ZOOM_DISPLAYED, (zoomButtonsController != null) && (zoomButtonsController.isVisible()) || ((zoomControls != null) && (zoomControls.getVisibility() == View.VISIBLE)) ? 1 : 0);
 	}
 
 	@OriginalApi
@@ -326,16 +366,17 @@ public class MapView extends ViewGroup implements IMapView {
 	@OriginalApi
 	@Override
 	public boolean onTouchEvent(MotionEvent event) {
+		// We only consume the touch event if it is used by the zoom button.
+		// The gestures detected by us are also relevant for the underlying MapView!
 		gestureDetector.onTouchEvent(event);
-		Log.w(TAG, "Possibly incomplete implementation of onTouchEvent()");
 		return (zoomButtonsController != null && zoomButtonsController.isVisible() && zoomButtonsController.onTouch(this, event));
 	}
 
 	@OriginalApi
 	@Override
 	public boolean onTrackballEvent(MotionEvent event) {
-		// TODO
-		Log.w(TAG, "Incomplete implementation of onTouchEvent()");
+		Log.w(TAG, "Incomplete implementation of onTrackballEvent()");
+		// TODO we do not support trackball well, but they're kind of deprecated anyway?!
 		return false;
 	}
 
@@ -348,13 +389,12 @@ public class MapView extends ViewGroup implements IMapView {
 	@OriginalApi
 	public void preLoad() {
 		Log.w(TAG, "Incomplete implementation of preLoad()");
-		// TODO
+		// TODO not sure what this actually does...
 	}
 
 	@OriginalApi
 	public void setBuiltInZoomControls(boolean on) {
 		zoomControlsEnabled = on;
-		Log.w(TAG, "Possibly incomplete implementation of setBuiltInZoomControls()");
 		if (zoomButtonsController == null) {
 			zoomButtonsController = new ZoomButtonsController(this);
 			zoomButtonsController.setZoomSpeed(2000);
@@ -383,8 +423,7 @@ public class MapView extends ViewGroup implements IMapView {
 
 	@OriginalApi
 	public void setReticleDrawMode(ReticleDrawMode mode) {
-		Log.w(TAG, "Incomplete implementation of setReticleDrawMode()");
-		// TODO
+		reticleDrawMode = mode;
 	}
 
 	@OriginalApi
@@ -507,6 +546,7 @@ public class MapView extends ViewGroup implements IMapView {
 
 		@OriginalApi
 		public String debug(String output) {
+			// We use the same output format as the original Google implementation, although i doubt anybody parses it.
 			return output + "MapView.LayoutParams={" +
 					"width=" + sizeToString(this.width) +
 					", height=" + sizeToString(this.height) +
@@ -527,6 +567,17 @@ public class MapView extends ViewGroup implements IMapView {
 					new SimpleRegisterReceiver(context), new SafeNetworkAvailabilityCheck(context),
 					TileSourceFactory.DEFAULT_TILE_SOURCE), null, attrs);
 			setMultiTouchControls(true);
+			updateTileSource();
+		}
+
+		public void updateTileSource() {
+			if (satellite) {
+				setTileSource(SATELLITE);
+			} else if (traffic) {
+				setTileSource(TRAFFIC);
+			} else {
+				setTileSource(DEFAULT);
+			}
 		}
 
 		@Override
