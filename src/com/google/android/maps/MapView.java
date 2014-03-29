@@ -79,12 +79,17 @@ public class MapView extends ViewGroup implements IMapView {
 		// Warn the developer that his usage of MapView will not work with Google's implementation.
 
 		if (attrs != null) {
-			TypedArray array = context.obtainStyledAttributes(attrs, R.styleable.MapView);
-			if (array != null) {
-				if (apiKey == null) {
-					apiKey = array.getString(R.styleable.MapView_apiKey);
+			try {
+				TypedArray array = context.obtainStyledAttributes(attrs, R.styleable.MapView);
+				if (array != null) {
+					if (apiKey == null) {
+						apiKey = array.getString(R.styleable.MapView_apiKey);
+					}
+					array.recycle();
 				}
-				array.recycle();
+			} catch (Exception e) {
+				// This might fail, if we can't access the internal R or it's modified
+				Log.w(TAG, e);
 			}
 		}
 

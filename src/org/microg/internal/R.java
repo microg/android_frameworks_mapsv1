@@ -14,7 +14,7 @@ public class R {
 
 	private static Field getField(String type, String name) {
 		try {
-			Class cls = Class.forName("com.android.internal.R." + type);
+			Class cls = Class.forName("com.android.internal.R$" + type);
 			return cls.getField(name);
 		} catch (Exception e) {
 			Log.w(TAG, "Could not retrieve com.android.internal.R." + type + "." + name, e);
