@@ -10,6 +10,11 @@ import org.microg.annotation.OriginalApi;
 
 import java.util.ArrayList;
 
+/*
+ * TODO:
+ * - Rank items by latitude instead of index as done by the original version!
+ */
+
 @OriginalApi
 public abstract class ItemizedOverlay<Item extends OverlayItem> extends Overlay implements Overlay.Snappable {
 	private static final String TAG = ItemizedOverlay.class.getName();
@@ -19,6 +24,8 @@ public abstract class ItemizedOverlay<Item extends OverlayItem> extends Overlay 
 
 	private final Drawable defaultMarker;
 	private final ArrayList<Item> internalList = new ArrayList<Item>();
+	private int latSpanE6;
+	private int lonSpanE6;
 	private Item focusedItem;
 	private OnFocusChangeListener focusChangeListener;
 	private boolean pendingFocusChangeEvent = false;
@@ -78,7 +85,12 @@ public abstract class ItemizedOverlay<Item extends OverlayItem> extends Overlay 
 	@OriginalApi
 	public GeoPoint getCenter() {
 		Log.w(TAG, "Incomplete implementation of getCenter()");
-		return null; // TODO
+		if (!internalList.isEmpty()) {
+			// TODO
+			return internalList.get(0).getPoint();
+		} else {
+			return null;
+		}
 	}
 
 	@OriginalApi
@@ -95,7 +107,7 @@ public abstract class ItemizedOverlay<Item extends OverlayItem> extends Overlay 
 	@OriginalApi
 	protected int getIndexToDraw(int drawingOrder) {
 		Log.w(TAG, "Incomplete implementation of getIndexToDraw()");
-		return 0; // TODO
+		return drawingOrder; // TODO
 	}
 
 	@OriginalApi
@@ -111,26 +123,22 @@ public abstract class ItemizedOverlay<Item extends OverlayItem> extends Overlay 
 
 	@OriginalApi
 	public int getLastFocusedIndex() {
-		Log.w(TAG, "Possibly incomplete implementation of getLastFocusedIndex()");
-		return mLastFocusedIndex; // TODO
+		return mLastFocusedIndex;
 	}
 
 	@OriginalApi
 	protected void setLastFocusedIndex(int lastFocusedIndex) {
-		Log.w(TAG, "Possibly incomplete implementation of setLastFocusedIndex()");
-		mLastFocusedIndex = lastFocusedIndex; // TODO
+		mLastFocusedIndex = lastFocusedIndex;
 	}
 
 	@OriginalApi
 	public int getLatSpanE6() {
-		Log.w(TAG, "Incomplete implementation of getLatSpanE6()");
-		return 0; // TODO
+		return latSpanE6;
 	}
 
 	@OriginalApi
 	public int getLonSpanE6() {
-		Log.w(TAG, "Incomplete implementation of getLonSpanE6()");
-		return 0; // TODO
+		return lonSpanE6;
 	}
 
 	@OriginalApi
@@ -140,8 +148,11 @@ public abstract class ItemizedOverlay<Item extends OverlayItem> extends Overlay 
 
 	@OriginalApi
 	public Item nextFocus(boolean forwards) {
-		Log.w(TAG, "Incomplete implementation of nextFocus()");
-		return null; // TODO
+		if (forwards) {
+			return mLastFocusedIndex >= internalList.size() - 1 ? null : internalList.get(mLastFocusedIndex + 1);
+		} else {
+			return mLastFocusedIndex <= 0 ? null : internalList.get(mLastFocusedIndex - 1);
+		}
 	}
 
 	@OriginalApi
@@ -174,10 +185,17 @@ public abstract class ItemizedOverlay<Item extends OverlayItem> extends Overlay 
 			mapView.getProjection().toPixels(item.getPoint(), point);
 			if (hitTest(item, marker, touchPoint.x - point.x, touchPoint.y - point.y)) {
 				boolean result = onTap(i);
-				// TODO things like focus and select here...
+				if (focusedItem != item) {
+					focusedItem = item;
+					mLastFocusedIndex = i;
+					if (focusChangeListener != null) {
+						focusChangeListener.onFocusChanged(this, item);
+					}
+				}
 				return result;
 			}
 		}
+		focusedItem = null;
 		return false;
 	}
 
@@ -206,22 +224,28 @@ public abstract class ItemizedOverlay<Item extends OverlayItem> extends Overlay 
 			int size = size();
 			internalList.clear();
 			internalList.ensureCapacity(size);
+			int minLatE6 = 90000000, maxLatE6 = -90000000, minLonE6 = 180000000, maxLonE6 = -180000000;
 			for (int i = 0; i < size; i++) {
-				internalList.add(createItem(i));
+				Item item = createItem(i);
+				minLatE6 = Math.min(minLatE6, item.getPoint().getLatitudeE6());
+				maxLatE6 = Math.max(maxLatE6, item.getPoint().getLatitudeE6());
+				minLonE6 = Math.min(minLonE6, item.getPoint().getLongitudeE6());
+				minLonE6 = Math.min(minLonE6, item.getPoint().getLongitudeE6());
+				internalList.add(item);
 			}
+			latSpanE6 = maxLatE6 - minLatE6;
+			lonSpanE6 = maxLonE6 - minLonE6;
 		}
 	}
 
 	@OriginalApi
 	public void setDrawFocusedItem(boolean drawFocusedItem) {
-		Log.w(TAG, "Possibly incomplete implementation of setDrawFocusedItem()");
-		this.drawFocusedItem = drawFocusedItem; // TODO
+		this.drawFocusedItem = drawFocusedItem;
 	}
 
 	@OriginalApi
 	public void setOnFocusChangeListener(OnFocusChangeListener l) {
-		Log.w(TAG, "Possibly incomplete implementation of setOnFocusChangeListener()");
-		this.focusChangeListener = l; // TODO
+		this.focusChangeListener = l;
 	}
 
 	@OriginalApi

@@ -13,7 +13,8 @@ Download `com.google.android.maps.zip` and install it from recovery.
 
 #### or
 
-Download `com.google.android.maps.jar` and `com.google.android.maps.xml`, copy them to `/system/framework/com.google.android.maps.jar`, respectively `/system/etc/permissions/com.google.android.maps.xml` and reboot. The following shell commands will do the job:
+Download `com.google.android.maps.jar` and `com.google.android.maps.xml`, copy them to `/system/framework/com.google.android.maps.jar`, respectively `/system/etc/permissions/com.google.android.maps.xml` 
+and reboot. The following shell commands will do the job:
 
 	adb root && sleep 5 && adb remount
 	adb push path/to/com.google.android.maps.jar /system/framework/com.google.android.maps.jar
@@ -36,7 +37,8 @@ This will allow you to replace Google Maps with osmdroid in an existing app with
 ### As part of a custom ROM
 MapsV1 can be build as part of Android when building an Android ROM from source.
 
-Add the repo to your (local) manifest.xml (as well as the dependencies [android_external_osmdroid](https://github.com/microg/android_external_osmdroid) and [android_external_slf4j](https://github.com/microg/android_external_slf4j) and extend the `PRODUCT_PACKAGES` variable with `com.google.android.maps` and `com.google.android.maps.xml`.
+Add the repo to your (local) manifest.xml (as well as the dependencies [android_external_osmdroid](https://github.com/microg/android_external_osmdroid) and 
+[android_external_slf4j](https://github.com/microg/android_external_slf4j)) and extend the `PRODUCT_PACKAGES` variable with `com.google.android.maps` and `com.google.android.maps.xml`.
 
 Attribution
 -----------

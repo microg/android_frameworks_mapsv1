@@ -42,9 +42,18 @@ public class R {
 		}
 	}
 
+	public static final class array {
+		private static final String TYPE = "array";
+		public static final int maps_starting_lat_lng = getInt(TYPE, "maps_starting_lat_lng");
+		public static final int maps_starting_zoom = getInt(TYPE, "maps_starting_zoom");
+	}
+
 	public static final class attr {
 		private static final String TYPE = "attr";
 		public static final int mapViewStyle = getInt(TYPE, "mapViewStyle");
+		public static final int state_focused = getInt(TYPE, "state_focused");
+		public static final int state_pressed = getInt(TYPE, "state_pressed");
+		public static final int state_selected = getInt(TYPE, "state_selected");
 	}
 
 	public static final class styleable {

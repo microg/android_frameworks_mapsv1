@@ -28,13 +28,17 @@ public class MapController implements IMapController, View.OnKeyListener {
 	@OriginalApi
 	public void animateTo(GeoPoint point, Message message) {
 		wrapped.animateTo(point);
-		// TODO: handle message
+		// TODO: delay message
+		if (message != null) {
+			message.sendToTarget();
+		}
 	}
 
 	@OriginalApi
 	public void animateTo(GeoPoint point, Runnable runnable) {
 		wrapped.animateTo(point);
-		// TODO: handle runnable
+		// TODO: delay runnable
+		runnable.run();
 	}
 
 	@OriginalApi

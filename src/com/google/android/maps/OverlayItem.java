@@ -2,6 +2,7 @@ package com.google.android.maps;
 
 import android.graphics.drawable.Drawable;
 import org.microg.annotation.OriginalApi;
+import org.microg.internal.R;
 
 @OriginalApi
 public class OverlayItem {
@@ -10,7 +11,7 @@ public class OverlayItem {
 	@OriginalApi
 	public static int ITEM_STATE_PRESSED_MASK = 1;
 	@OriginalApi
-	public static int ITEM_STATE_SELECTED_MASK = 0;
+	public static int ITEM_STATE_SELECTED_MASK = 2;
 
 	@OriginalApi
 	protected Drawable mMarker;
@@ -28,9 +29,17 @@ public class OverlayItem {
 		mSnippet = snippet;
 	}
 
+	private static int unbitset(int bitset, int mask, int value) {
+		return (bitset & mask) == mask ? value : -value;
+	}
+
 	@OriginalApi
 	public static void setState(Drawable drawable, int stateBitset) {
-		// TODO
+		drawable.setState(new int[]{
+				unbitset(stateBitset, ITEM_STATE_FOCUSED_MASK, R.attr.state_focused),
+				unbitset(stateBitset, ITEM_STATE_SELECTED_MASK, R.attr.state_selected),
+				unbitset(stateBitset, ITEM_STATE_PRESSED_MASK, R.attr.state_pressed)
+		});
 	}
 
 	@OriginalApi

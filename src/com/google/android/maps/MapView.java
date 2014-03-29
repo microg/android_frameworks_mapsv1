@@ -45,6 +45,7 @@ public class MapView extends ViewGroup implements IMapView {
 
 	private GestureDetector gestureDetector;
 	private Handler handler = new Handler();
+	private MapController mapController;
 	private ReticleDrawMode reticleDrawMode;
 	private final WrappedMapView wrapped;
 	private boolean zoomControlsEnabled = true;
@@ -74,6 +75,7 @@ public class MapView extends ViewGroup implements IMapView {
 	public MapView(Context context, AttributeSet attrs, int defStyle, String apiKey) {
 		super(context, attrs, defStyle);
 		wrapped = new WrappedMapView(context, attrs);
+		mapController = new MapController(wrapped.getController());
 		addView(wrapped);
 
 		// Warn the developer that his usage of MapView will not work with Google's implementation.
@@ -98,6 +100,16 @@ public class MapView extends ViewGroup implements IMapView {
 		}
 		if (!(context instanceof MapActivity)) {
 			Log.w(TAG, "MapViews must only be created inside instances of MapActivity to be compatible with Google's implementation.");
+		}
+
+		// Set startup location as suggested from resources
+		try {
+			int[] latlonE6 = getResources().getIntArray(R.array.maps_starting_lat_lng);
+			getController().setCenter(new GeoPoint(latlonE6[0], latlonE6[1]));
+			getController().setZoom(getResources().getIntArray(R.array.maps_starting_zoom)[0]);
+		} catch (Exception e) {
+			// This might fail, if we can't access the internal R or it's modified
+			Log.w(TAG, e);
 		}
 
 		// We detect gestures non-exclusively. osmdroid uses the same gesture detection,
@@ -169,7 +181,7 @@ public class MapView extends ViewGroup implements IMapView {
 	@OriginalApi
 	@Override
 	public MapController getController() {
-		return new MapController(wrapped.getController());
+		return mapController;
 	}
 
 	@OriginalApi
