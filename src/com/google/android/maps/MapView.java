@@ -305,6 +305,8 @@ public class MapView extends ViewGroup implements IMapView {
 	@Override
 	protected void onDetachedFromWindow() {
 		super.onDetachedFromWindow();
+        // Fix for bug in ZoomButtonsController
+        if (zoomButtonsController != null) zoomButtonsController.setVisible(false);
 	}
 
 	@OriginalApi
