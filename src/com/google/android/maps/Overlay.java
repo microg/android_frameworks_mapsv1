@@ -106,7 +106,7 @@ public class Overlay extends org.osmdroid.views.overlay.Overlay {
 	@Override
 	public boolean onSingleTapConfirmed(MotionEvent e, org.osmdroid.views.MapView mapView) {
 		if (mapView instanceof MapView.WrappedMapView)
-			return onTap(new GeoPoint(mapView.getProjection().fromPixels(e.getX(), e.getY())), ((MapView.WrappedMapView) mapView).getOriginal());
+			return onTap(new GeoPoint(mapView.getProjection().fromPixels((int)e.getX(), (int)e.getY())), ((MapView.WrappedMapView) mapView).getOriginal());
 		return false;
 	}
 
