@@ -1,0 +1,124 @@
+/*
+ * Copyright 2013-2015 microG Project Team
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+def BUILD_TOOLS_VERSION = "23.0.2"
+def ANDROID_SDK_DIR = System.env.ANDROID_HOME
+
+Properties properties = new Properties()
+if (file(project.rootProject.file('local.properties')).exists()) {
+    properties.load(project.rootProject.file('local.properties').newDataInputStream())
+} else {
+    println "No local.properties file found. This is likely to cause problems."
+}
+
+if (!ANDROID_SDK_DIR) {
+    ANDROID_SDK_DIR = properties.getProperty('sdk.dir')
+}
+if (!ANDROID_SDK_DIR) {
+    println "Android SDK could not be found, either set ANDROID_HOME environment variable or configure 'sdk.dir' in local.properties."
+}
+if (!file(ANDROID_SDK_DIR).exists()) {
+    println "Android SDK not found at '$ANDROID_SDK_DIR', either set ANDROID_HOME environment variable or configure 'sdk.dir' in local.properties."
+}
+def BUILD_TOOLS_DX = "$ANDROID_SDK_DIR/build-tools/$BUILD_TOOLS_VERSION/dx"
+if (!file(BUILD_TOOLS_DX).exists()) {
+    println "Could not find build tools $BUILD_TOOLS_VERSION in Android SDK."
+}
+
+def SIGN_STORE_FILE = properties.getProperty("sign.storeFile");
+def SIGN_STORE_PASS = properties.getProperty("sign.storePassword");
+def SIGN_KEY_ALIAS = properties.getProperty("sign.keyAlias");
+def SIGN_KEY_PASS = properties.getProperty("sign.keyPassword");
+
+if (!SIGN_STORE_FILE) {
+    SIGN_STORE_FILE = System.env.HOME + '/.keystore'
+}
+if (!SIGN_STORE_FILE || !file(SIGN_STORE_FILE).exists()) {
+    println "No key store for jarsigner defined and/or '$SIGN_STORE_FILE' does not exist. Use sign.storeFile in local.properties to define a custom key store."
+}
+if (!SIGN_STORE_PASS || !SIGN_KEY_ALIAS || !SIGN_KEY_PASS) {
+    println "Details to access key incomplete. Make sure to define sign.storePassword, sign.keyAlias and sign.keyPassword in local.properties"
+}
+
+repositories {
+    jcenter()
+}
+
+dependencies {
+    project(':mapsv1-compat-osmdroid')
+}
+
+task prepareFrameworkDex(type: Copy, dependsOn: ':mapsv1-compat-osmdroid:packageReleaseJar') {
+    project(':mapsv1-compat-osmdroid').configurations.compile.asFileTree.each { from zipTree(it) }
+    from zipTree(project(':mapsv1-compat-osmdroid').file('build/intermediates/bundles/release/classes.jar'))
+    into 'build/intermediates/classes'
+    exclude 'META-INF/**'
+    include '**/*.class'
+} << {
+    file('build/intermediates/bundle').mkdirs()
+}
+
+task frameworkDex(type: Exec, dependsOn: prepareFrameworkDex) {
+    executable "${BUILD_TOOLS_DX}"
+    args "--dex"
+    args "--output="+file('build/intermediates/bundle/classes.dex').path
+    args file('build/intermediates/classes').path
+}
+
+task frameworkJar(type: Jar, dependsOn: frameworkDex) {
+    destinationDir file('build/intermediates/flashableZip/system/framework')
+    baseName 'com.google.android.maps'
+    from 'build/intermediates/bundle'
+}
+
+task signFrameworkJar(type: Exec, dependsOn: frameworkJar) {
+    executable "jarsigner"
+    args '-keystore', "$SIGN_STORE_FILE"
+    args '-storepass', "$SIGN_STORE_PASS"
+    args '-keypass', "$SIGN_KEY_PASS"
+    args '-sigalg', 'SHA1withRSA'
+    args '-digestalg', 'SHA1'
+    args file('build/intermediates/flashableZip/system/framework/com.google.android.maps.jar').path
+    args "$SIGN_KEY_ALIAS"
+}
+
+task flashableZip(type: Zip, dependsOn: signFrameworkJar) {
+    destinationDir file('build/outputs')
+    baseName 'mapsv1.flashable'
+    from 'src/main/files/'
+    from 'build/intermediates/flashableZip'
+}
+
+task signFlashableZip(type: Exec, dependsOn: flashableZip) {
+    executable "jarsigner"
+    args '-keystore', "$SIGN_STORE_FILE"
+    args '-storepass', "$SIGN_STORE_PASS"
+    args '-keypass', "$SIGN_KEY_PASS"
+    args '-sigalg', 'SHA1withRSA'
+    args '-digestalg', 'SHA1'
+    args file('build/outputs/mapsv1.flashable.zip').path
+    args "$SIGN_KEY_ALIAS"
+}
+
+task assemble(dependsOn: signFlashableZip)
+
+task clean(type: Delete) {
+    delete 'build'
+}
+
+if (file('user.gradle').exists()) {
+    apply from: 'user.gradle'
+}

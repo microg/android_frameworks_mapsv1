@@ -1,0 +1,2 @@
+include ':mapsv1-compat-osmdroid'
+include ':mapsv1-flashable'

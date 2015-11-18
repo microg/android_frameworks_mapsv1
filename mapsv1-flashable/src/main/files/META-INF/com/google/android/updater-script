@@ -1,0 +1,14 @@
+show_progress(0.2, 0);
+ui_print("Mounting /system...");
+run_program("/sbin/busybox", "mount", "/system");
+
+show_progress(0.3, 0);
+ui_print("Extracting package...");
+package_extract_dir("system", "/system");
+
+show_progress(0.8, 0);
+ui_print("Unmounting /system...");
+unmount("/system");
+
+show_progress(1.0, 0);
+ui_print("Done");

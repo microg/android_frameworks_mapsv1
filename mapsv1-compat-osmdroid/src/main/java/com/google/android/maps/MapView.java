@@ -126,8 +126,18 @@ public class MapView extends ViewGroup implements IMapView {
 				displayZoomControls(false);
 				return false;
 			}
-		});
-		gestureDetector.setIsLongpressEnabled(false);
+
+            @Override
+            public void onLongPress(MotionEvent e) {
+                MapView.this.performLongClick();
+            }
+
+            @Override
+            public boolean onSingleTapConfirmed(MotionEvent e) {
+                return MapView.this.performClick();
+            }
+        });
+        //gestureDetector.setIsLongpressEnabled(false);
 	}
 
 	@OriginalApi
