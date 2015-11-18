@@ -16,10 +16,10 @@ Download `com.google.android.maps.zip` and install it from recovery.
 Download `com.google.android.maps.jar` and `com.google.android.maps.xml`, copy them to `/system/framework/com.google.android.maps.jar`, respectively `/system/etc/permissions/com.google.android.maps.xml` 
 and reboot. The following shell commands will do the job:
 
-	adb root && sleep 5 && adb remount
-	adb push path/to/com.google.android.maps.jar /system/framework/com.google.android.maps.jar
-	adb oush path/to/com.google.android.maps.xml /system/etc/permissions/com.google.android.maps.xml
-	adb reboot
+    adb root && sleep 5 && adb remount
+    adb push path/to/com.google.android.maps.jar /system/framework/com.google.android.maps.jar
+    adb push path/to/com.google.android.maps.xml /system/etc/permissions/com.google.android.maps.xml
+    adb reboot
 
 Building
 --------
@@ -44,6 +44,7 @@ Attribution
 -----------
 This won't be possible without the hard work of the guys at [osmdroid](https://github.com/osmdroid).
 
+
 License
 -------
     Copyright 2013-2015 microG Project Team
@@ -59,4 +60,3 @@ License
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     See the License for the specific language governing permissions and
     limitations under the License.
-
