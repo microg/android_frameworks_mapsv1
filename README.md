@@ -21,6 +21,22 @@ and reboot. The following shell commands will do the job:
     adb push path/to/com.google.android.maps.xml /system/etc/permissions/com.google.android.maps.xml
     adb reboot
 
+Setting up a signing key
+------------------------
+
+Generate a new Java signing key as follows:
+
+    keytool -genkeypair -keyalg RSA -sigalg SHA1withRSA -alias androidkey
+
+You will have to pick a password for the keystore, and a password for the key.
+(Java will default to use the same for both. That's fine for our purposes.)
+
+Now add the following to the `local.properties` of this project:
+
+    sign.storePassword=YOUR_PASSWORD
+    sign.keyAlias=androidkey
+    sign.keyPassword=YOUR_PASSWORD
+
 Building
 --------
 To be build with Android Build System using `make com.google.android.maps`.
