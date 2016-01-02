@@ -115,6 +115,8 @@ task signFlashableZip(type: Exec, dependsOn: flashableZip) {
 
 task assemble(dependsOn: signFlashableZip)
 
+task assembleRelease(dependsOn: assemble)
+
 task clean(type: Delete) {
     delete 'build'
 }
