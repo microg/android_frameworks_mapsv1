@@ -5,7 +5,7 @@ git:
 before_script:
   - echo sdk.dir $ANDROID_HOME > local.properties
   - keytool -genkeypair -keyalg RSA -sigalg SHA1withRSA -alias testkey -keystore .keystore -keypass testkey -storepass testkey -dname "CN=Test"
-  - echo sign.storeFile=.keystore >> local.properties 
+  - echo sign.storeFile=$(pwd)/.keystore >> local.properties 
   - echo sign.storePassword=testkey >> local.properties
   - echo sign.keyAlias=testkey >> local.properties
   - echo sign.keyPassword=testkey >> local.properties
