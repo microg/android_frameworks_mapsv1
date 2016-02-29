@@ -6,6 +6,8 @@ import android.view.View;
 import org.microg.annotation.OriginalApi;
 import org.osmdroid.api.IGeoPoint;
 import org.osmdroid.api.IMapController;
+import org.osmdroid.tileprovider.modules.MapTileFilesystemProvider;
+import org.osmdroid.tileprovider.modules.TileWriter;
 
 @OriginalApi
 public class MapController implements IMapController, View.OnKeyListener {
@@ -103,6 +105,16 @@ public class MapController implements IMapController, View.OnKeyListener {
 	@Override
 	public boolean zoomOutFixing(int xPixel, int yPixel) {
 		return wrapped.zoomOutFixing(xPixel, yPixel);
+	}
+
+	@Override
+	public boolean zoomTo(int zoomLevel) {
+		return wrapped.zoomTo(zoomLevel);
+	}
+
+	@Override
+	public boolean zoomToFixing(int zoomLevel, int xPixel, int yPixel) {
+		return wrapped.zoomToFixing(zoomLevel, xPixel, yPixel);
 	}
 
 	@OriginalApi

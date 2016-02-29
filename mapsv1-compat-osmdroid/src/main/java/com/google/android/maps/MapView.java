@@ -13,9 +13,11 @@ import android.widget.ZoomButtonsController;
 import android.widget.ZoomControls;
 import org.microg.annotation.OriginalApi;
 import org.microg.internal.R;
+import org.microg.osmdroid.EmptyResourceProxyImpl;
 import org.microg.osmdroid.SafeMapTileProviderBasic;
 import org.microg.osmdroid.SafeNetworkAvailabilityCheck;
 import org.osmdroid.DefaultResourceProxyImpl;
+import org.osmdroid.ResourceProxy;
 import org.osmdroid.api.IMapView;
 import org.osmdroid.tileprovider.tilesource.ITileSource;
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
@@ -42,6 +44,8 @@ public class MapView extends ViewGroup implements IMapView {
 	private static final ITileSource DEFAULT = TileSourceFactory.MAPNIK;
 	private static final ITileSource TRAFFIC = TileSourceFactory.PUBLIC_TRANSPORT;
 	private static final ITileSource SATELLITE = TileSourceFactory.MAPQUESTAERIAL;
+
+	public static ResourceProxy DEFAULT_RESOURCE_PROXY = new EmptyResourceProxyImpl();
 
 	private GestureDetector gestureDetector;
 	private Handler handler = new Handler();
@@ -74,6 +78,7 @@ public class MapView extends ViewGroup implements IMapView {
 
 	public MapView(Context context, AttributeSet attrs, int defStyle, String apiKey) {
 		super(context, attrs, defStyle);
+		DEFAULT_RESOURCE_PROXY = new DefaultResourceProxyImpl(context);
 		wrapped = new WrappedMapView(context, attrs);
 		mapController = new MapController(wrapped.getController());
 		addView(wrapped);
@@ -592,7 +597,7 @@ public class MapView extends ViewGroup implements IMapView {
 	public class WrappedMapView extends org.osmdroid.views.MapView {
 
 		public WrappedMapView(Context context, AttributeSet attrs) {
-			super(context, 256, new DefaultResourceProxyImpl(context), new SafeMapTileProviderBasic(context,
+			super(context, new DefaultResourceProxyImpl(context), new SafeMapTileProviderBasic(context,
 					new SimpleRegisterReceiver(context), new SafeNetworkAvailabilityCheck(context),
 					TileSourceFactory.DEFAULT_TILE_SOURCE), null, attrs);
 			setMultiTouchControls(true);

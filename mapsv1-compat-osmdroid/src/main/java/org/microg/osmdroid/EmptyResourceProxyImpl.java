@@ -2,6 +2,8 @@ package org.microg.osmdroid;
 
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
+import android.util.DisplayMetrics;
+
 import org.osmdroid.ResourceProxy;
 
 public class EmptyResourceProxyImpl implements ResourceProxy {
@@ -28,5 +30,10 @@ public class EmptyResourceProxyImpl implements ResourceProxy {
 	@Override
 	public float getDisplayMetricsDensity() {
 		return 0;
+	}
+
+	@Override
+	public DisplayMetrics getDisplayMetrics() {
+		return new DisplayMetrics();
 	}
 }

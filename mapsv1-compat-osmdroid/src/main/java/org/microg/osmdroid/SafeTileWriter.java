@@ -3,19 +3,27 @@ package org.microg.osmdroid;
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.util.Log;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.NoSuchElementException;
+import org.osmdroid.api.IMapView;
+
 import org.osmdroid.tileprovider.MapTile;
 import org.osmdroid.tileprovider.constants.OpenStreetMapTileProviderConstants;
 import org.osmdroid.tileprovider.modules.IFilesystemCache;
 import org.osmdroid.tileprovider.tilesource.ITileSource;
 import org.osmdroid.tileprovider.util.StreamUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.*;
-import java.util.*;
 
 /**
- * An implementation of {@link org.osmdroid.tileprovider.modules.IFilesystemCache}. It writes tiles to the file system cache. If the
+ * An implementation of {@link IFilesystemCache}. It writes tiles to the file system cache. If the
  * cache exceeds 600 Mb then it will be trimmed to 500 Mb.
  *
  * This modified version checks if the default cache is accessible (by checking for the
@@ -24,13 +32,12 @@ import java.util.*;
  * @author Neil Boyd
  *
  */
-public class SafeTileWriter implements IFilesystemCache, OpenStreetMapTileProviderConstants {
+public class SafeTileWriter implements IFilesystemCache {
 
 	// ===========================================================
 	// Constants
 	// ===========================================================
 
-	private static final Logger logger = LoggerFactory.getLogger(SafeTileWriter.class);
 
 	// ===========================================================
 	// Fields
@@ -48,7 +55,7 @@ public class SafeTileWriter implements IFilesystemCache, OpenStreetMapTileProvid
 	public SafeTileWriter(Context context) {
 
 		if (context.checkCallingOrSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
-			safeTilePathBase = TILE_PATH_BASE;
+			safeTilePathBase = OpenStreetMapTileProviderConstants.TILE_PATH_BASE;
 		} else {
 			safeTilePathBase = new File(context.getExternalCacheDir(), "tiles");
 		}
@@ -58,12 +65,14 @@ public class SafeTileWriter implements IFilesystemCache, OpenStreetMapTileProvid
 			@Override
 			public void run() {
 				mUsedCacheSpace = 0; // because it's static
+
 				calculateDirectorySize(safeTilePathBase);
-				if (mUsedCacheSpace > TILE_MAX_CACHE_SIZE_BYTES) {
+
+				if (mUsedCacheSpace > OpenStreetMapTileProviderConstants.TILE_MAX_CACHE_SIZE_BYTES) {
 					cutCurrentCache();
 				}
-				if (DEBUGMODE) {
-					logger.debug("Finished init thread");
+				if (OpenStreetMapTileProviderConstants.DEBUGMODE) {
+					Log.d(IMapView.LOGTAG,"Finished init thread");
 				}
 			}
 		};
@@ -91,10 +100,10 @@ public class SafeTileWriter implements IFilesystemCache, OpenStreetMapTileProvid
 
 	@Override
 	public boolean saveFile(final ITileSource pTileSource, final MapTile pTile,
-			final InputStream pStream) {
+							final InputStream pStream) {
 
 		final File file = new File(safeTilePathBase, pTileSource.getTileRelativeFilenameString(pTile)
-				+ TILE_PATH_EXTENSION);
+				+ OpenStreetMapTileProviderConstants.TILE_PATH_EXTENSION);
 
 		final File parent = file.getParentFile();
 		if (!parent.exists() && !createFolderAndCheckIfExists(parent)) {
@@ -108,7 +117,7 @@ public class SafeTileWriter implements IFilesystemCache, OpenStreetMapTileProvid
 			final long length = StreamUtils.copy(pStream, outputStream);
 
 			mUsedCacheSpace += length;
-			if (mUsedCacheSpace > TILE_MAX_CACHE_SIZE_BYTES) {
+			if (mUsedCacheSpace > OpenStreetMapTileProviderConstants.TILE_MAX_CACHE_SIZE_BYTES) {
 				cutCurrentCache(); // TODO perhaps we should do this in the background
 			}
 		} catch (final IOException e) {
@@ -129,8 +138,8 @@ public class SafeTileWriter implements IFilesystemCache, OpenStreetMapTileProvid
 		if (pFile.mkdirs()) {
 			return true;
 		}
-		if (DEBUGMODE) {
-			logger.debug("Failed to create " + pFile + " - wait and check again");
+		if (OpenStreetMapTileProviderConstants.DEBUGMODE) {
+			Log.d(IMapView.LOGTAG,"Failed to create " + pFile + " - wait and check again");
 		}
 
 		// if create failed, wait a bit in case another thread created it
@@ -140,13 +149,13 @@ public class SafeTileWriter implements IFilesystemCache, OpenStreetMapTileProvid
 		}
 		// and then check again
 		if (pFile.exists()) {
-			if (DEBUGMODE) {
-				logger.debug("Seems like another thread created " + pFile);
+			if (OpenStreetMapTileProviderConstants.DEBUGMODE) {
+				Log.d(IMapView.LOGTAG,"Seems like another thread created " + pFile);
 			}
 			return true;
 		} else {
-			if (DEBUGMODE) {
-				logger.debug("File still doesn't exist: " + pFile);
+			if (OpenStreetMapTileProviderConstants.DEBUGMODE) {
+				Log.d(IMapView.LOGTAG,"File still doesn't exist: " + pFile);
 			}
 			return false;
 		}
@@ -213,12 +222,13 @@ public class SafeTileWriter implements IFilesystemCache, OpenStreetMapTileProvid
 	 */
 	private void cutCurrentCache() {
 
-		synchronized (safeTilePathBase) {
+		final File lock=safeTilePathBase;
+		synchronized (lock) {
 
-			if (mUsedCacheSpace > TILE_TRIM_CACHE_SIZE_BYTES) {
+			if (mUsedCacheSpace > OpenStreetMapTileProviderConstants.TILE_TRIM_CACHE_SIZE_BYTES) {
 
-				logger.info("Trimming tile cache from " + mUsedCacheSpace + " to "
-						+ TILE_TRIM_CACHE_SIZE_BYTES);
+				Log.d(IMapView.LOGTAG,"Trimming tile cache from " + mUsedCacheSpace + " to "
+						+ OpenStreetMapTileProviderConstants.TILE_TRIM_CACHE_SIZE_BYTES);
 
 				final List<File> z = getDirectoryFileList(safeTilePathBase);
 
@@ -232,7 +242,7 @@ public class SafeTileWriter implements IFilesystemCache, OpenStreetMapTileProvid
 				});
 
 				for (final File file : files) {
-					if (mUsedCacheSpace <= TILE_TRIM_CACHE_SIZE_BYTES) {
+					if (mUsedCacheSpace <= OpenStreetMapTileProviderConstants.TILE_TRIM_CACHE_SIZE_BYTES) {
 						break;
 					}
 
@@ -242,7 +252,7 @@ public class SafeTileWriter implements IFilesystemCache, OpenStreetMapTileProvid
 					}
 				}
 
-				logger.info("Finished trimming tile cache");
+				Log.d(IMapView.LOGTAG,"Finished trimming tile cache");
 			}
 		}
 	}

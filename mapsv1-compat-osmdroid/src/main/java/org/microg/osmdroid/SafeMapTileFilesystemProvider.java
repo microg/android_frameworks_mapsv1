@@ -1,30 +1,36 @@
 package org.microg.osmdroid;
 
-import android.Manifest;
-import android.content.Context;
-import android.content.pm.PackageManager;
-import android.graphics.drawable.Drawable;
+import java.io.File;
+import java.io.InputStream;
+import java.util.concurrent.atomic.AtomicReference;
+
+import org.osmdroid.tileprovider.BitmapPool;
 import org.osmdroid.tileprovider.ExpirableBitmapDrawable;
 import org.osmdroid.tileprovider.IRegisterReceiver;
 import org.osmdroid.tileprovider.MapTile;
 import org.osmdroid.tileprovider.MapTileRequestState;
+import org.osmdroid.tileprovider.ReusableBitmapDrawable;
+import org.osmdroid.tileprovider.modules.DatabaseFileArchive;
 import org.osmdroid.tileprovider.modules.MapTileFileStorageProviderBase;
 import org.osmdroid.tileprovider.modules.MapTileModuleProviderBase;
 import org.osmdroid.tileprovider.tilesource.BitmapTileSourceBase.LowMemoryException;
 import org.osmdroid.tileprovider.tilesource.ITileSource;
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.util.concurrent.atomic.AtomicReference;
+import android.Manifest;
+import android.content.Context;
+import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
+import android.util.Log;
+import org.osmdroid.api.IMapView;
+import org.osmdroid.tileprovider.constants.OpenStreetMapTileProviderConstants;
 
 /**
  * Implements a file system cache and provides cached tiles. This functions as a tile provider by
  * serving cached tiles for the supplied tile source.
- *
- * This modified version checks if the default cache is accessible (by checking for the
- * WRITE_EXTERNAL_STORAGE-permission) and uses an app-specific cache if not.
  *
  * @author Marc Kurtz
  * @author Nicolas Gramlich
@@ -36,14 +42,12 @@ public class SafeMapTileFilesystemProvider extends MapTileFileStorageProviderBas
 	// Constants
 	// ===========================================================
 
-	private static final Logger logger = LoggerFactory.getLogger(SafeMapTileFilesystemProvider.class);
-
 	// ===========================================================
 	// Fields
 	// ===========================================================
 
 	private final long mMaximumCachedFileAge;
-
+	private DatabaseFileArchive databaseFileArchive;
 	private final AtomicReference<ITileSource> mTileSource = new AtomicReference<ITileSource>();
 
 	private final File safeTilePathBase;
@@ -57,15 +61,15 @@ public class SafeMapTileFilesystemProvider extends MapTileFileStorageProviderBas
 	}
 
 	public SafeMapTileFilesystemProvider(Context context, final IRegisterReceiver pRegisterReceiver,
-	                                     final ITileSource aTileSource) {
-		this(context, pRegisterReceiver, aTileSource, DEFAULT_MAXIMUM_CACHED_FILE_AGE);
+									 final ITileSource aTileSource) {
+		this(context, pRegisterReceiver, aTileSource, OpenStreetMapTileProviderConstants.DEFAULT_MAXIMUM_CACHED_FILE_AGE);
 	}
 
 	public SafeMapTileFilesystemProvider(Context context, final IRegisterReceiver pRegisterReceiver,
-	                                     final ITileSource pTileSource, final long pMaximumCachedFileAge) {
+										 final ITileSource pTileSource, final long pMaximumCachedFileAge) {
 		this(context, pRegisterReceiver, pTileSource, pMaximumCachedFileAge,
-				NUMBER_OF_TILE_FILESYSTEM_THREADS,
-				TILE_FILESYSTEM_MAXIMUM_QUEUE_SIZE);
+				OpenStreetMapTileProviderConstants.NUMBER_OF_TILE_FILESYSTEM_THREADS,
+				OpenStreetMapTileProviderConstants.TILE_FILESYSTEM_MAXIMUM_QUEUE_SIZE);
 	}
 
 	/**
@@ -75,11 +79,11 @@ public class SafeMapTileFilesystemProvider extends MapTileFileStorageProviderBas
 	 * @param pRegisterReceiver
 	 */
 	public SafeMapTileFilesystemProvider(Context context, final IRegisterReceiver pRegisterReceiver,
-	                                     final ITileSource pTileSource, final long pMaximumCachedFileAge, int pThreadPoolSize,
-	                                     int pPendingQueueSize) {
+										 final ITileSource pTileSource, final long pMaximumCachedFileAge, int pThreadPoolSize,
+										 int pPendingQueueSize) {
 		super(pRegisterReceiver, pThreadPoolSize, pPendingQueueSize);
 		if (context.checkCallingOrSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
-			safeTilePathBase = TILE_PATH_BASE;
+			safeTilePathBase = OpenStreetMapTileProviderConstants.TILE_PATH_BASE;
 		} else {
 			safeTilePathBase = new File(context.getExternalCacheDir(), "tiles");
 		}
@@ -118,13 +122,14 @@ public class SafeMapTileFilesystemProvider extends MapTileFileStorageProviderBas
 	@Override
 	public int getMinimumZoomLevel() {
 		ITileSource tileSource = mTileSource.get();
-		return tileSource != null ? tileSource.getMinimumZoomLevel() : MINIMUM_ZOOMLEVEL;
+		return tileSource != null ? tileSource.getMinimumZoomLevel() : OpenStreetMapTileProviderConstants.MINIMUM_ZOOMLEVEL;
 	}
 
 	@Override
 	public int getMaximumZoomLevel() {
 		ITileSource tileSource = mTileSource.get();
-		return tileSource != null ? tileSource.getMaximumZoomLevel() : MAXIMUM_ZOOMLEVEL;
+		return tileSource != null ? tileSource.getMaximumZoomLevel()
+				: microsoft.mappoint.TileSystem.getMaximumZoomLevel();
 	}
 
 	@Override
@@ -150,8 +155,8 @@ public class SafeMapTileFilesystemProvider extends MapTileFileStorageProviderBas
 
 			// if there's no sdcard then don't do anything
 			if (!getSdCardAvailable()) {
-				if (DEBUGMODE) {
-					logger.debug("No sdcard - do nothing for tile: " + tile);
+				if (OpenStreetMapTileProviderConstants.DEBUGMODE) {
+					Log.d(IMapView.LOGTAG,"No sdcard - do nothing for tile: " + tile);
 				}
 				return null;
 			}
@@ -159,7 +164,7 @@ public class SafeMapTileFilesystemProvider extends MapTileFileStorageProviderBas
 			// Check the tile source to see if its file is available and if so, then render the
 			// drawable and return the tile
 			final File file = new File(safeTilePathBase,
-					tileSource.getTileRelativeFilenameString(tile) + TILE_PATH_EXTENSION);
+					tileSource.getTileRelativeFilenameString(tile) + OpenStreetMapTileProviderConstants.TILE_PATH_EXTENSION);
 			if (file.exists()) {
 
 				try {
@@ -170,17 +175,17 @@ public class SafeMapTileFilesystemProvider extends MapTileFileStorageProviderBas
 					final long lastModified = file.lastModified();
 					final boolean fileExpired = lastModified < now - mMaximumCachedFileAge;
 
-					if (fileExpired) {
-						if (DEBUGMODE) {
-							logger.debug("Tile expired: " + tile);
+					if (fileExpired && drawable != null) {
+						if (OpenStreetMapTileProviderConstants.DEBUGMODE) {
+							Log.d(IMapView.LOGTAG,"Tile expired: " + tile);
 						}
-						drawable.setState(new int[] {ExpirableBitmapDrawable.EXPIRED });
+						ExpirableBitmapDrawable.setDrawableExpired(drawable);
 					}
 
 					return drawable;
 				} catch (final LowMemoryException e) {
 					// low memory so empty the queue
-					logger.warn("LowMemoryException downloading MapTile: " + tile + " : " + e);
+					Log.w(IMapView.LOGTAG,"LowMemoryException downloading MapTile: " + tile + " : " + e);
 					throw new CantContinueException(e);
 				}
 			}

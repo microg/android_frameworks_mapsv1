@@ -1,0 +1,28 @@
+language: android
+sudo: false
+git:
+  submodules: false
+before_script:
+  - echo sdk.dir $ANDROID_HOME > local.properties
+  - keytool -genkeypair -keyalg RSA -sigalg SHA1withRSA -alias testkey -keystore .keystore -keypass testkey -storepass testkey -dname "CN=Test"
+  - echo sign.storeFile=.keystore >> local.properties 
+  - echo sign.storePassword=testkey >> local.properties
+  - echo sign.keyAlias=testkey >> local.properties
+  - echo sign.keyPassword=testkey >> local.properties
+script:
+  - export TERM=dumb
+  - export JAVA_OPTS="-XX:MaxPermSize=1024m -XX:+CMSClassUnloadingEnabled -XX:+HeapDumpOnOutOfMemoryError -Xmx2048m"
+  - ./gradlew build
+android:
+  components:
+  - platform-tools
+  - tools
+  - build-tools-23.0.2
+  - android-23
+  - extra-android-m2repository
+before_cache:
+  - rm -f $HOME/.gradle/caches/modules-2/modules-2.lock
+cache:
+  directories:
+    - $HOME/.gradle/caches/
+    - $HOME/.gradle/wrapper/

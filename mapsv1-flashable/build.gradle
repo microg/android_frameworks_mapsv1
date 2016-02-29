@@ -61,8 +61,12 @@ dependencies {
     project(':mapsv1-compat-osmdroid')
 }
 
-task prepareFrameworkDex(type: Copy, dependsOn: ':mapsv1-compat-osmdroid:packageReleaseJar') {
-    project(':mapsv1-compat-osmdroid').configurations.compile.asFileTree.each { from zipTree(it) }
+task prepareFrameworkDex(type: Copy, dependsOn: ':mapsv1-compat-osmdroid:assembleRelease') {
+    project(':mapsv1-compat-osmdroid').configurations.compile.asFileTree.each {
+        if (it.name.endsWith(".aar"))
+            zipTree(it).each { if (it.name.equals("classes.jar")) from zipTree(it) }
+        else
+            from zipTree(it) }
     from zipTree(project(':mapsv1-compat-osmdroid').file('build/intermediates/bundles/release/classes.jar'))
     into 'build/intermediates/classes'
     exclude 'META-INF/**'
@@ -113,9 +117,11 @@ task signFlashableZip(type: Exec, dependsOn: flashableZip) {
     args "$SIGN_KEY_ALIAS"
 }
 
-task assemble(dependsOn: signFlashableZip)
+task assembleRelease(dependsOn: signFlashableZip)
 
-task assembleRelease(dependsOn: assemble)
+task assemble(dependsOn: assembleRelease)
+
+task build(dependsOn: assemble)
 
 task clean(type: Delete) {
     delete 'build'
