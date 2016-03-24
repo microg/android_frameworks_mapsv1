@@ -1,60 +1,11 @@
-MapsV1
+<img src="http://i.imgur.com/hXY4lcC.png" height="42px" alt="microG" /> Maps API (mapsv1)
 ======
-The next generation Maps API v1 implementation, based on osmdroid.
+[![Build Status](https://travis-ci.org/microg/android_frameworks_mapsv1.svg?branch=master)](https://travis-ci.org/microg/android_frameworks_mapsv1)
 
-Installation as system library
-------------------------------
-MapsV1 can be used on any rooted Android system to replace the Google Maps API v1 with an OpenStreetMap based implementation.
+A system library, providing the same functionality as now deprecated Google Maps API v1.
 
-Release builds may be found on the [release page](https://github.com/microg/android_frameworks_mapsv1/releases).
+### Please refer to the [wiki](https://github.com/microg/android_frameworks_mapsv1/wiki) for downloads and instructions
 
-### Android 2.3 - 4.4
-Download `com.google.android.maps.zip` and install it from recovery.
-
-#### or
-
-Download `com.google.android.maps.jar` and `com.google.android.maps.xml`, copy them to `/system/framework/com.google.android.maps.jar`, respectively `/system/etc/permissions/com.google.android.maps.xml` 
-and reboot. The following shell commands will do the job:
-
-    adb root && sleep 5 && adb remount
-    adb push path/to/com.google.android.maps.jar /system/framework/com.google.android.maps.jar
-    adb push path/to/com.google.android.maps.xml /system/etc/permissions/com.google.android.maps.xml
-    adb reboot
-
-Setting up a signing key
-------------------------
-
-Generate a new Java signing key as follows:
-
-    keytool -genkeypair -keyalg RSA -sigalg SHA1withRSA -alias androidkey
-
-You will have to pick a password for the keystore, and a password for the key.
-(Java will default to use the same for both. That's fine for our purposes.)
-
-Now add the following to the `local.properties` of this project:
-
-    sign.storePassword=YOUR_PASSWORD
-    sign.keyAlias=androidkey
-    sign.keyPassword=YOUR_PASSWORD
-
-Building
---------
-To be build with Android Build System using `make com.google.android.maps`.
-
-Alternatively use any build system of your choice by creating an appropriate build file (if it's done well i'll add it via pull request).
-
-### Dependencies
-Heavily depends on [osmdroid](https://github.com/osmdroid/osmdroid) as well as its dependency [slf4j](https://github.com/qos-ch/slf4j)
-
-### Building apps against MapsV1
-You can build your app against MapsV1 instead of Google Maps.
-This will allow you to replace Google Maps with osmdroid in an existing app without the need to change a line of code.
-
-### As part of a custom ROM
-MapsV1 can be build as part of Android when building an Android ROM from source.
-
-Add the repo to your (local) manifest.xml (as well as the dependencies [android_external_osmdroid](https://github.com/microg/android_external_osmdroid) and 
-[android_external_slf4j](https://github.com/microg/android_external_slf4j)) and extend the `PRODUCT_PACKAGES` variable with `com.google.android.maps` and `com.google.android.maps.xml`.
 
 Attribution
 -----------
@@ -63,7 +14,7 @@ This won't be possible without the hard work of the guys at [osmdroid](https://g
 
 License
 -------
-    Copyright 2013-2015 microG Project Team
+    Copyright 2013-2016 microG Project Team
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
