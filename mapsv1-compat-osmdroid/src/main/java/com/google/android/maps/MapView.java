@@ -35,9 +35,9 @@ import android.widget.ZoomControls;
 
 import org.microg.annotation.OriginalApi;
 import org.microg.internal.R;
+import org.microg.osmdroid.CustomResourceProxyImpl;
 import org.microg.osmdroid.SafeMapTileProviderBasic;
 import org.microg.osmdroid.SafeNetworkAvailabilityCheck;
-import org.osmdroid.DefaultResourceProxyImpl;
 import org.osmdroid.api.IMapView;
 import org.osmdroid.tileprovider.tilesource.ITileSource;
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
@@ -631,7 +631,7 @@ public class MapView extends ViewGroup implements IMapView {
     public class WrappedMapView extends org.osmdroid.views.MapView {
 
         public WrappedMapView(Context context, AttributeSet attrs) {
-            super(context, new DefaultResourceProxyImpl(context), new SafeMapTileProviderBasic(context,
+            super(context, new CustomResourceProxyImpl(context), new SafeMapTileProviderBasic(context,
                     new SimpleRegisterReceiver(context), new SafeNetworkAvailabilityCheck(context),
                     TileSourceFactory.DEFAULT_TILE_SOURCE), null, attrs);
             setMultiTouchControls(true);

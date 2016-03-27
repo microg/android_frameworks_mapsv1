@@ -25,6 +25,7 @@ import android.location.LocationListener;
 import android.os.Bundle;
 
 import org.microg.annotation.OriginalApi;
+import org.microg.osmdroid.CustomResourceProxyImpl;
 import org.osmdroid.api.IMyLocationOverlay;
 
 public class MyLocationOverlay extends Overlay implements IMyLocationOverlay, SensorListener, LocationListener, Overlay.Snappable {
@@ -32,7 +33,7 @@ public class MyLocationOverlay extends Overlay implements IMyLocationOverlay, Se
 
     @OriginalApi
     public MyLocationOverlay(Context context, MapView mapView) {
-        this(new org.osmdroid.views.overlay.MyLocationOverlay(context, (org.osmdroid.views.MapView) mapView.getWrapped()));
+        this(new org.osmdroid.views.overlay.MyLocationOverlay(context, (org.osmdroid.views.MapView) mapView.getWrapped(), new CustomResourceProxyImpl(context)));
     }
 
     public MyLocationOverlay(IMyLocationOverlay wrapped) {
@@ -92,7 +93,7 @@ public class MyLocationOverlay extends Overlay implements IMyLocationOverlay, Se
 
     @OriginalApi
     public GeoPoint getMyLocation() {
-        return new GeoPoint(wrapped.getLastFix());
+        return getLastFix() != null ? new GeoPoint(getLastFix()) : null;
     }
 
     @OriginalApi

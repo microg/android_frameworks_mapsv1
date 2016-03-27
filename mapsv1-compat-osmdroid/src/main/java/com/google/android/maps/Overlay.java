@@ -25,8 +25,7 @@ import android.view.KeyEvent;
 import android.view.MotionEvent;
 
 import org.microg.annotation.OriginalApi;
-import org.microg.osmdroid.EmptyResourceProxyImpl;
-import org.osmdroid.DefaultResourceProxyImpl;
+import org.microg.osmdroid.CustomResourceProxyImpl;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -42,7 +41,7 @@ public class Overlay extends org.osmdroid.views.overlay.Overlay {
 
     @OriginalApi
     public Overlay() {
-        super(MapView.DEFAULT_CONTEXT == null ? new EmptyResourceProxyImpl() : new DefaultResourceProxyImpl(MapView.DEFAULT_CONTEXT));
+        super(MapView.DEFAULT_CONTEXT == null ? new CustomResourceProxyImpl() : new CustomResourceProxyImpl(MapView.DEFAULT_CONTEXT));
     }
 
     @OriginalApi
@@ -159,7 +158,7 @@ public class Overlay extends org.osmdroid.views.overlay.Overlay {
     }
 
     @OriginalApi
-    public static interface Snappable {
-        public boolean onSnapToItem(int x, int y, Point snapPoint, MapView mapView);
+    public interface Snappable {
+        boolean onSnapToItem(int x, int y, Point snapPoint, MapView mapView);
     }
 }
